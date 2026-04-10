@@ -134,7 +134,7 @@ chart_col, stat_col = st.columns([2, 1])
 
 with chart_col:
     fig = go.Figure()
-    # Baseline: Light Gray Dash
+    # Baseline: Purple Dash
     fig.add_trace(go.Scatter(x=years, y=path_baseline, name='Baseline', line=dict(color='#CBD5E1', width=2, dash='dot')))
     
     if treatment_on:
