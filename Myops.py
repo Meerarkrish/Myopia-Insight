@@ -4,69 +4,73 @@ import numpy as np
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestRegressor
 
-# --- 1. THE MODERN INTERFACE & PASTEL STYLING ---
+# --- 1. THE MODERN INTERFACE & LIGHT GREY STYLING ---
 st.set_page_config(page_title="Myopia Insight AI", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500&display=swap');
     
-    .stApp { background-color: #0F172A; } /* Deep Navy Background */
+    /* Light Grey Background */
+    .stApp { background-color: #F1F5F9; } 
     
     .header-box {
-        background-color: #1E293B; 
+        background-color: #FFFFFF; 
         padding: 50px;
         margin: -6rem -5rem 2rem -5rem; 
         width: 110%; 
-        border-bottom: 2px solid #B7E4C7;
+        border-bottom: 3px solid #B7E4C7; /* Pastel Green Accent */
+        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
     }
     
     .headline-main { 
         font-family: 'Poppins', sans-serif; 
         font-size: 42px; 
         font-weight: 700; 
-        color: #B7E4C7 !important; /* LIGHT PASTEL GREEN */
+        color: #74C69D !important; /* DARKER PASTEL GREEN for readability on white */
         letter-spacing: -1px;
     }
 
     .sub-headline {
-        color: #94A3B8;
+        color: #64748B;
         font-family: 'Inter', sans-serif;
         font-size: 18px;
+        margin-top: 5px;
     }
 
+    /* Cards for the content */
     .stat-card {
-        background: rgba(183, 228, 199, 0.05);
+        background: #FFFFFF;
         padding: 25px; 
         border-radius: 15px; 
-        border: 1px solid rgba(183, 228, 199, 0.3);
-        color: white;
+        border: 1px solid #E2E8F0;
+        color: #1E293B;
+        box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
     }
     
-    /* Customizing Sidebar colors for Dark Mode */
-    [data-testid="stSidebar"] {
-        background-color: #1E293B;
+    /* Text color for standard streamlit labels */
+    .stSlider label, .stNumberInput label, .stRadio label {
+        color: #334155 !important;
+        font-weight: 500;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. THE DATA SCIENCE ENGINE (Random Forest) ---
+# --- 2. THE DATA SCIENCE ENGINE ---
 @st.cache_resource
 def train_clinical_model():
-    """Generates a synthetic longitudinal dataset and trains a regressor"""
-    n_samples = 10000
+    n_samples = 5000
     age = np.random.uniform(5, 16, n_samples)
     current_rx = np.random.uniform(-5, 0, n_samples)
     outdoor = np.random.uniform(0, 4, n_samples)
     screen = np.random.uniform(1, 10, n_samples)
     genetics = np.random.choice([0, 1, 2], n_samples)
     
-    # Complex non-linear target logic
     progression = (
-        (-0.7 * (21 - age)) * (1 / (age * 0.4)) # Age-based decay
-        + (outdoor * 0.2) # Protective
-        - (screen * 0.12) # Risk
-        - (genetics * 0.3) # Genetic multiplier
+        (-0.7 * (21 - age)) * (1 / (age * 0.4)) 
+        + (outdoor * 0.2) 
+        - (screen * 0.12) 
+        - (genetics * 0.3) 
     )
     target_rx = current_rx + progression
     
@@ -81,33 +85,29 @@ ml_engine = train_clinical_model()
 st.markdown("""
     <div class="header-box">
         <div class="headline-main">Myopia Insight</div>
-        <div class="sub-headline">Predictive Refractive Trajectory • Powered by Random Forest Regression</div>
+        <div class="sub-headline">AI-Driven Refractive Trajectory • Predictive Public Health Tool</div>
     </div>
 """, unsafe_allow_html=True)
 
-# --- 4. LAYOUT & INPUTS ---
+# --- 4. LAYOUT ---
 col_in, col_viz = st.columns([1, 2])
 
 with col_in:
-    st.markdown("### 🧬 Clinical Input")
-    with st.container():
-        age_now = st.slider("Current Age", 5, 18, 10)
-        rx_now = st.number_input("Current Prescription (D)", -10.0, 0.0, -1.25, step=0.25)
-        
-        st.markdown("---")
-        st.markdown("### 📱 Lifestyle Variables")
-        sunlight = st.slider("Outdoor Light (Hrs/Day)", 0.0, 5.0, 1.0)
-        digital = st.slider("Digital Device Usage (Hrs/Day)", 0.0, 12.0, 6.0)
-        parents = st.radio("Number of Myopic Parents", [0, 1, 2], horizontal=True)
+    st.markdown("### 🧬 Patient Metrics")
+    age_now = st.slider("Current Age", 5, 18, 10)
+    rx_now = st.number_input("Current Prescription (D)", -10.0, 0.0, -1.25, step=0.25)
+    
+    st.markdown("---")
+    st.markdown("### 📱 Behavioral Factors")
+    sunlight = st.slider("Outdoor Light (Hrs/Day)", 0.0, 5.0, 1.0)
+    digital = st.slider("Digital Device Usage (Hrs/Day)", 0.0, 12.0, 6.0)
+    parents = st.radio("Number of Myopic Parents", [0, 1, 2], horizontal=True)
 
-# --- 5. PREDICTION & RECURSIVE INFERENCE ---
-# We use the ML model to forecast each year until age 21
+# --- 5. PREDICTION ---
 years = np.arange(age_now, 22)
 path = []
 temp_rx = rx_now
-
 for y in years:
-    # Feature array for the ML model
     features = np.array([[y, temp_rx, sunlight, digital, parents]])
     pred = ml_engine.predict(features)[0]
     path.append(pred)
@@ -119,39 +119,38 @@ with col_viz:
     
     fig = go.Figure()
     
-    # Predicted Path
     fig.add_trace(go.Scatter(
         x=years, y=path, 
         mode='lines+markers',
         name='Predicted Trajectory',
-        line=dict(color='#B7E4C7', width=4),
-        marker=dict(size=8)
+        line=dict(color='#74C69D', width=4), # Darker pastel green for the line
+        marker=dict(size=8, color='#40916C')
     ))
 
-    # Threshold Zones
-    fig.add_hrect(y0=-6, y1=-12, fillcolor="red", opacity=0.1, annotation_text="High Myopia Risk Area")
+    fig.add_hrect(y0=-6, y1=-12, fillcolor="#FF0000", opacity=0.05, annotation_text="Pathological Myopia Risk")
     
     fig.update_layout(
-        title="10-Year Refractive Forecast (AI Inference)",
-        template="plotly_dark",
+        title="10-Year Forecast (ML Projection)",
+        template="plotly_white", # Changed to white template
         paper_bgcolor='rgba(0,0,0,0)',
         plot_bgcolor='rgba(0,0,0,0)',
-        xaxis=dict(title="Age", gridcolor="rgba(255,255,255,0.1)"),
-        yaxis=dict(title="Prescription (Diopters)", gridcolor="rgba(255,255,255,0.1)"),
-        height=500
+        xaxis=dict(title="Age", showgrid=True, gridcolor="#E2E8F0"),
+        yaxis=dict(title="Prescription (Diopters)", showgrid=True, gridcolor="#E2E8F0"),
+        height=500,
+        font=dict(color="#1E293B")
     )
     
     st.plotly_chart(fig, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- 7. IMPACT FOOTER ---
-res_col1, res_col2 = st.columns(2)
-with res_col1:
-    final_rx = path[-1]
-    st.metric("Predicted Final Rx (Age 21)", f"{final_rx:.2f} D", delta=f"{final_rx - rx_now:.2f} Change")
-
-with res_col2:
-    risk_level = "🔴 High" if final_rx < -6.0 else "🟡 Moderate" if final_rx < -3.0 else "🟢 Low"
-    st.subheader(f"Pathological Risk: {risk_level}")
-
-st.info("The AI identifies your current combination of digital hours and baseline age as the primary driver for progression. Increasing sunlight to 2+ hours could significantly flatten this curve.")
+# --- 7. RESULTS ---
+st.markdown("---")
+res1, res2, res3 = st.columns(3)
+with res1:
+    st.metric("Final Rx (Age 21)", f"{path[-1]:.2f} D")
+with res2:
+    total_change = path[-1] - rx_now
+    st.metric("Total Predicted Change", f"{total_change:.2f} D")
+with res3:
+    status = "🔴 High Risk" if path[-1] < -6.0 else "🟡 Moderate" if path[-1] < -3.0 else "🟢 Healthy"
+    st.subheader(f"Status: {status}")
