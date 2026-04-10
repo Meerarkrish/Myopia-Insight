@@ -1,74 +1,56 @@
 import streamlit as st
-import pandas as pd
+import pandas as pd 
 import numpy as np
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestRegressor
 from datetime import datetime
 
-# --- 1. RESEARCH-GRADE UI CONFIGURATION ---
+# --- 1. UI CONFIGURATION ---
 st.set_page_config(page_title="Myopia Insight | Hitha Krishna", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=IBM+Plex+Sans:wght@500;700&family=Lexend:wght@700&display=swap');
     
-    /* Global Styles */
-    .stApp { background-color: #0F172A; } /* Dark Slate Background */
-    h1, h2, h3 { font-family: 'Lexend', sans-serif; color: #F1F5F9; }
-    p, span, label { font-family: 'IBM Plex Sans', sans-serif; color: #94A3B8; }
-
-    /* Custom Header with Light Pastel Green Title */
-    .res-header {
-        background-color: #1E293B;
-        padding: 1.5rem 3rem;
-        margin: -6rem -5rem 2rem -5rem;
-        border-bottom: 2px solid #334155;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    /* Reverted to Professional Light Background */
+    .stApp { background-color: #F8FAFC; }
+    
+    /* Header Styling */
+    .header-container {
+        background-color: #FFFFFF;
+        padding: 1.5rem 2rem;
+        border-bottom: 2px solid #E2E8F0;
+        margin-bottom: 2rem;
     }
     
-    .res-title { 
-        font-family: 'Lexend', sans-serif;
-        font-size: 28px; 
+    .main-title { 
+        font-family: 'Lexend', sans-serif; 
+        font-size: 38px; 
         font-weight: 700; 
-        color: #B7E4C7; /* Requested Pastel Green Title */
-        letter-spacing: -0.5px; 
-    }
-    .res-tag { background: #334155; padding: 4px 12px; border-radius: 4px; font-size: 11px; color: #94A3B8; font-weight: 600; text-transform: uppercase; }
-
-    /* Professional Content Cards */
-    .metric-card {
-        background: #1E293B;
-        border: 1px solid #334155;
-        padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        color: #B7E4C7; /* Requested Pastel Green */
+        margin: 0;
     }
     
-    /* Input Styling - Shift sliders from red to fluorescent cyan */
-    div[data-baseweb="slider"] > div { background: #22D3EE !important; } /* Fluorescent Cyan track */
-    div[role="slider"] { background-color: #22D3EE !important; border: 2px solid #FFFFFF !important; } /* Slider Handle */
-    
-    /* Input number boxes */
-    input[type=number] { background-color: #1E293B !important; color: #22D3EE !important; border: 1px solid #334155 !important; }
-    
-    /* Toggle Switch from green to fluorescent purple */
-    div[data-testid="stCheckbox"] > label > div[role="switch"] > div { background-color: #A855F7 !important; }
+    .sub-title { font-family: 'Inter', sans-serif; font-size: 13px; color: #94A3B8; letter-spacing: 1px; }
 
-    /* Lifestyle Recommendation Cards */
+    /* Custom Neon/Fluorescent Sliders */
+    div[data-baseweb="slider"] > div { background: #22D3EE !important; } /* Fluorescent Cyan Track */
+    div[role="slider"] { background-color: #22D3EE !important; border: 2px solid #FFFFFF !important; }
+    
+    /* Recommendation Styles */
     .rec-card {
-        padding: 18px;
+        padding: 15px;
         border-radius: 8px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
         border-left: 5px solid;
+        font-family: 'Inter', sans-serif;
     }
-    .rec-warning { background-color: #2D2010; border-color: #F59E0B; color: #FCD34D; }
-    .rec-success { background-color: #102D20; border-color: #10B981; color: #6EE7B7; }
+    .rec-warning { background-color: #FFFBEB; border-color: #F59E0B; color: #92400E; }
+    .rec-success { background-color: #F0FDF4; border-color: #10B981; color: #065F46; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. ML CORE ---
+# --- 2. ML ENGINE ---
 @st.cache_resource
 def train_clinical_model():
     n_samples = 40000 
@@ -79,136 +61,121 @@ def train_clinical_model():
     genetics = np.random.choice([0, 1, 2], n_samples)
     is_preterm = np.random.choice([0, 1], n_samples)
     has_gd = np.random.choice([0, 1], n_samples)
-    sleep = np.random.uniform(4, 13, n_samples)
-    gender = np.random.choice([0, 1], n_samples)
     work_dist = np.random.uniform(15, 60, n_samples)
     onset_age = np.random.uniform(3, 15, n_samples)
-    prog = ((-0.8 * (24 - age)) * (1 / (age * 0.6)) + (outdoor * 0.2) - (screen * 0.2) - (genetics * 0.4))
+    
+    prog = ((-0.8 * (24 - age)) * (1 / (age * 0.5)) + (outdoor * 0.2) - (screen * 0.25) - (genetics * 0.4))
     target = current_rx + prog
+    
     X = pd.DataFrame({'age': age, 'rx': current_rx, 'out': outdoor, 'scr': screen, 
-                      'gen': genetics, 'pre': is_preterm, 'gd': has_gd, 'slp': sleep, 
-                      'sex': gender, 'dist': work_dist, 'onset': onset_age})
+                      'gen': genetics, 'pre': is_preterm, 'gd': has_gd, 'slp': 8, 
+                      'sex': 1, 'dist': work_dist, 'onset': onset_age})
     return RandomForestRegressor(n_estimators=100, random_state=42).fit(X, target)
 
 model = train_clinical_model()
 
-# --- 3. SIDEBAR CONTROLS ---
-with st.sidebar:
-    st.markdown("### Patient Demographics")
-    age_now = st.slider("Age at Assessment", 2, 23, 10)
-    sex = st.radio("Biological Sex", ["Male", "Female", "Other"], horizontal=True)
-    region = st.selectbox("Global Region", ["East Asia", "South Asia", "Europe", "North America", "Other"])
-    st.divider()
-    st.markdown("### Clinical Parameters")
-    od_s = st.number_input("OD Sphere (Right)", -15.0, 2.0, -1.50, step=0.25)
-    os_s = st.number_input("OS Sphere (Left)", -15.0, 2.0, -1.25, step=0.25)
-    onset = st.number_input("Age of Myopia Onset", 2, age_now, 7)
-    st.divider()
-    st.markdown("### Medical History")
-    preterm = st.checkbox("Preterm History")
-    maternal_gd = st.checkbox("Maternal GD History")
-    parents = st.select_slider("Myopic Parents", options=[0, 1, 2])
-
-# --- 4. NAVIGATION BAR ---
-st.markdown(f"""
-    <div class="res-header">
-        <div class="res-title">Myopia Insight <span style="color:#94A3B8; font-weight:400; font-size:16px;">v2.1</span></div>
-        <div class="res-tag">Clinical Repository Active</div>
+# --- 3. HEADER ---
+st.markdown("""
+    <div class="header-container">
+        <div class="main-title">Myopia Insight AI</div>
+        <div class="sub-title">Clinical Decision Support • Repository: Meerarkrish/Myopia-Insight</div>
     </div>
 """, unsafe_allow_html=True)
 
+# --- 4. SIDEBAR (Restored All Options) ---
+with st.sidebar:
+    st.header("Patient Profile")
+    age_now = st.slider("Current Age", 2, 23, 10)
+    country = st.selectbox("Country/Region", ["Singapore", "China", "India", "USA", "UK", "Australia", "Other"])
+    heritage = st.toggle("East/South Asian Heritage")
+    st.divider()
+    
+    st.subheader("OD (Right Eye)")
+    od_sph = st.number_input("OD Sphere (D)", -15.0, 2.0, -1.50, step=0.25)
+    od_cyl = st.number_input("OD Cylinder (D)", -8.0, 0.0, -0.50, step=0.25)
+    
+    st.subheader("OS (Left Eye)")
+    os_sph = st.number_input("OS Sphere (D)", -15.0, 2.0, -1.25, step=0.25)
+    os_cyl = st.number_input("OS Cylinder (D)", -8.0, 0.0, -0.50, step=0.25)
+    st.divider()
+    
+    st.subheader("Medical History")
+    onset = st.number_input("Age of Myopia Onset", 2, age_now, 7)
+    parents = st.radio("Myopic Parents", [0, 1, 2], horizontal=True)
+    is_preterm = st.toggle("Preterm Birth History")
+    has_gd = st.toggle("Maternal Gestational Diabetes")
+
 # --- 5. MAIN DASHBOARD ---
-# Behavioral Inputs Row
-b1, b2, b3 = st.columns(3)
-with b1: outdoor = st.slider("Outdoor Exposure (Hrs/Day)", 0.0, 6.0, 1.0)
-with b2: screen = st.slider("Screen Usage (Hrs/Day)", 0.0, 16.0, 6.0)
-with b3: dist = st.slider("Near-Work Distance (cm)", 10, 60, 35)
+c1, c2, c3 = st.columns(3)
+with c1: outdoor = st.slider("Outdoor Time (Hrs/Day)", 0.0, 6.0, 1.0)
+with c2: screen = st.slider("Screen/Near-Work (Hrs/Day)", 0.0, 16.0, 6.0)
+with c3: dist = st.slider("Working Distance (cm)", 10, 60, 35)
 
+treatment = st.toggle("Enable Clinical Intervention Simulation")
+
+# Prediction Logic
 years = np.arange(age_now, 25)
-# Using Fluorescent Purple for treatment toggle
-treatment_active = st.toggle("Simulate Myopia Management Protocol (Atropine/Optical)")
-
-def predict_path(sph, treat):
+def get_path(sph, treat):
     path, curr = [], sph
-    rate = 0.58 if treat else 1.0
+    rate = 0.55 if treat else 1.0
     for y in years:
-        f = np.array([[y, curr, outdoor, screen, parents, int(preterm), int(maternal_gd), 8, (1 if sex=="Female" else 0), dist, onset]])
+        f = np.array([[y, curr, outdoor, screen, parents, int(is_preterm), int(has_gd), 8, 1, dist, onset]])
         p = model.predict(f)[0]
         curr = curr + ((p - curr) * rate)
         path.append(curr)
     return path
 
-p_baseline = predict_path(od_s, False)
-p_treated = predict_path(od_s, True)
+p_baseline = get_path(od_sph, False)
+p_treated = get_path(od_sph, True)
 
 # Layout: Chart vs Recommendations
-col_chart, col_rec = st.columns([2, 1])
+chart_col, rec_col = st.columns([2, 1])
 
-with col_chart:
-    st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+with chart_col:
     fig = go.Figure()
-    
     # Baseline: Neon Cyan Dash
     fig.add_trace(go.Scatter(x=years, y=p_baseline, name='Natural History', line=dict(color='#22D3EE', width=2, dash='dot')))
-    
-    if treatment_active:
+    if treatment:
         # Treatment: Fluorescent Purple Solid
-        fig.add_trace(go.Scatter(x=years, y=p_treated, name='Simulated Treatment', line=dict(color='#A855F7', width=5)))
-        
-    fig.update_layout(
-        template="plotly_dark", 
-        paper_bgcolor='rgba(0,0,0,0)', 
-        plot_bgcolor='rgba(0,0,0,0)',
-        height=450, 
-        margin=dict(l=0,r=0,t=40,b=0), 
-        yaxis_title="Sphere (D)", 
-        xaxis_title="Patient Age",
-        yaxis=dict(gridcolor='#334155'),
-        xaxis=dict(gridcolor='#334155')
-    )
+        fig.add_trace(go.Scatter(x=years, y=p_treated, name='Intervention Path', line=dict(color='#A855F7', width=5)))
+    fig.update_layout(template="simple_white", height=450, yaxis_title="Sphere (D)", xaxis_title="Age (Years)")
     st.plotly_chart(fig, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-with col_rec:
-    st.subheader("Lifestyle Interventions")
+with rec_col:
+    st.subheader("Lifestyle Recommendations")
     
     if dist < 30:
-        st.markdown(f'<div class="rec-card rec-warning"><b>Distance Alert:</b> Working distance is {dist}cm. Increase to >30cm.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="rec-card rec-warning"><b>Proximity Alert:</b> Distance is {dist}cm. Aim for >30cm.</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="rec-card rec-success"><b>Optimal Distance:</b> Maintain >30cm near work.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rec-card rec-success"><b>Optimal Distance:</b> Healthy working habits detected.</div>', unsafe_allow_html=True)
         
     if outdoor < 2:
-        st.markdown('<div class="rec-card rec-warning"><b>Light Deficiency:</b> Minimum 120 mins of sunlight required.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rec-card rec-warning"><b>Sunlight Deficiency:</b> Minimum 120 mins/day recommended.</div>', unsafe_allow_html=True)
     else:
-        st.markdown('<div class="rec-card rec-success"><b>Sufficient Light:</b> Target 2+ hours met.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="rec-card rec-success"><b>Sunlight Optimal:</b> Retinal dopamine stimulus met.</div>', unsafe_allow_html=True)
 
-    r1, r2 = st.columns(2)
-    final_rx = p_treated[-1] if treatment_active else p_baseline[-1]
-    # Replaced red metric text with high-tech fluorescent cyan
-    r1.metric("Predicted Refraction @ 24", f"{final_rx:.2f}D", delta_color="normal")
-    r2.metric("Cumulative Change", f"{final_rx - od_s:.2f}D", delta_color="normal")
+    st.divider()
+    final_val = p_treated[-1] if treatment else p_baseline[-1]
+    st.metric("Predicted Rx @ Age 24", f"{final_val:.2f} D")
 
-# --- 6. REPOSITORY & CITATION ---
+# --- 6. REPOSITORY & DOCUMENTATION ---
 st.divider()
 doc_a, doc_b = st.columns(2)
 
 with doc_a:
     st.markdown("**Academic Citation (BibTeX)**")
-    # Clean high-contrast code block for researchers
     st.code(f"""@software{{krishna_myopia_2026,
   author = {{Krishna, Hitha}},
   title = {{Myopia Insight AI: A Refractive Growth Prediction Engine}},
   year = {{2026}},
-  version = {{2.1.0}},
-  publisher = {{GitHub Repository}},
-  url = {{https://github.com/Meerarkrish/Myopia-Insight}},
-  note = {{Accessed: {datetime.now().strftime("%Y-%m-%d")}}}}}""", language="latex")
+  url = {{https://github.com/Meerarkrish/Myopia-Insight}}
+}}""", language="latex")
     
-    # Metadata Export
-    meta = {"timestamp": [datetime.now()], "sex": [sex], "region": [region], "parents": [parents], "final_rx": [final_rx]}
-    st.download_button("Download Anonymized CSV Metadata", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_research.csv", "text/csv")
+    meta = {"timestamp": [datetime.now()], "country": [country], "final_rx": [final_val]}
+    st.download_button("Download Research CSV", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_data.csv")
 
 with doc_b:
-    st.markdown("**Documentation & License**")
-    st.write(f"Source Code: [Meerarkrish/Myopia-Insight](https://github.com/Meerarkrish/Myopia-Insight)")
-    st.info("Licensed under the MIT Open Source License. Public usage requires academic attribution.")
+    st.markdown("**License & Repository**")
+    st.write(f"Source Code: [GitHub Link](https://github.com/Meerarkrish/Myopia-Insight)")
+    with st.expander("View MIT License Terms"):
+        st.text(f"Copyright (c) {datetime.now().year} Hitha Krishna\n\nPermission is hereby granted, free of charge...")
