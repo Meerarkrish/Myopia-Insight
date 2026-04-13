@@ -1,5 +1,5 @@
 import streamlit as st
-import pandas as pd 
+import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from sklearn.ensemble import RandomForestRegressor
@@ -18,17 +18,15 @@ st.markdown("""
     .main-title { 
         font-family: 'Lexend', sans-serif; 
         font-size: 42px; 
-        color: #A855F7; 
+        color: #A855F7 !important; 
         font-weight: 700;
         margin-bottom: 20px;
     }
 
     /* 2. SLIDERS: Fluorescent Green Track & Cursor */
-    /* The Track */
     div[data-baseweb="slider"] > div > div {
         background: #39FF14 !important;
     }
-    /* The Cursor/Handle */
     div[data-baseweb="slider"] [role="slider"] {
         background-color: #39FF14 !important;
         border: 2px solid #FFFFFF !important;
@@ -36,20 +34,22 @@ st.markdown("""
     }
 
     /* 3. TOGGLE & RADIOS: Neon Blue */
-    /* Toggle Background when ON */
-    div[data-testid="stCheckbox"] > label > div[role="switch"] > div[data-checked="true"] {
+    /* Target the switch specifically */
+    div[data-testid="stWidgetLabel"] + div [role="switch"][aria-checked="true"] > div {
         background-color: #00FFFF !important;
     }
-    /* Radio Button Circle when selected */
+    
+    /* Radio Circles */
     div[role="radiogroup"] div[data-checked="true"] > div {
         background-color: #00FFFF !important;
         border-color: #00FFFF !important;
         box-shadow: 0 0 10px #00FFFF !important;
     }
     
-    /* Clean up sidebar and metric cards */
-    [data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
     .stMetric { background: white; padding: 15px; border-radius: 10px; border: 1px solid #E2E8F0; }
+    
+    /* License Styling */
+    .license-text { font-size: 10px; color: #94A3B8; font-family: monospace; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -66,6 +66,7 @@ def train_clinical_model():
     has_gd = np.random.choice([0, 1], n_samples)
     work_dist = np.random.uniform(15, 60, n_samples)
     onset_age = np.random.uniform(3, 15, n_samples)
+    
     prog = ((-0.8 * (24 - age)) * (1 / (age * 0.5)) + (outdoor * 0.2) - (screen * 0.25) - (genetics * 0.4))
     target = current_rx + prog
     X = pd.DataFrame({'age': age, 'rx': current_rx, 'out': outdoor, 'scr': screen, 
@@ -76,16 +77,13 @@ def train_clinical_model():
 model = train_clinical_model()
 
 # --- 3. MAIN HEADING ---
-st.markdown('<h1 class="main-title">Myopia Insight AI</h1>', unsafe_allow_html=True)
+st.markdown('<div class="main-title">Myopia Insight AI</div>', unsafe_allow_html=True)
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
     st.title("Patient Inputs")
     age_now = st.slider("Current Age", 2, 23, 10)
-    
-    # GENDER (Restored & Neon Blue Styled)
     gender_choice = st.radio("Biological Gender", ["Male", "Female", "Other"], horizontal=True)
-    
     country = st.selectbox("Region", ["India", "Singapore", "China", "USA", "UK", "Australia", "Other"])
     heritage = st.toggle("East/South Asian Heritage")
     
@@ -106,7 +104,6 @@ with st.sidebar:
 # --- 5. MAIN DASHBOARD ---
 st.markdown("### Clinical Simulation & Lifestyle")
 
-# TREATMENT TOGGLE (Neon Blue Styled)
 treatment_on = st.toggle("Activate Treatment Simulation")
 
 c1, c2, c3 = st.columns(3)
@@ -114,7 +111,6 @@ with c1: outdoor = st.slider("Outdoor Sunlight (Hrs)", 0.0, 6.0, 1.0)
 with c2: screen = st.slider("Near-Work Hours", 0.0, 16.0, 6.0)
 with c3: dist = st.slider("Distance (cm)", 10, 60, 35)
 
-# Logic
 years = np.arange(age_now, 25)
 def get_path(sph, treat):
     path, curr = [], sph
@@ -129,46 +125,39 @@ def get_path(sph, treat):
 path_baseline = get_path(od_sph, False)
 path_treated = get_path(od_sph, True)
 
-# --- VISUALS ---
 chart_col, stat_col = st.columns([2, 1])
 
 with chart_col:
     fig = go.Figure()
-    # Baseline: Purple Dash
     fig.add_trace(go.Scatter(x=years, y=path_baseline, name='Baseline', line=dict(color='#CBD5E1', width=2, dash='dot')))
-    
     if treatment_on:
-        # 4. TREATMENT LINE: Fluorescent Purple
         fig.add_trace(go.Scatter(x=years, y=path_treated, name='Clinical Path', line=dict(color='#A855F7', width=6)))
-    
-    fig.update_layout(template="simple_white", height=450, yaxis_title="Sphere (D)", margin=dict(l=0,r=0,t=0,b=0))
+    fig.update_layout(template="simple_white", height=450, yaxis_title="Sphere (D)")
     st.plotly_chart(fig, use_container_width=True)
 
 with stat_col:
     st.subheader("Analysis")
     final_rx = path_treated[-1] if treatment_on else path_baseline[-1]
     st.metric("Forecasted Rx (Age 24)", f"{final_rx:.2f} D")
-    
-    if dist < 30:
-        st.error(f"⚠️ Proximity Alert: {dist}cm is too near.")
-    else:
-        st.success("✅ Working distance is healthy.")
-        
-    if outdoor < 2:
-        st.warning("⚠️ Light Alert: Need 2+ hrs sun.")
-    else:
-        st.success("✅ Sunlight levels optimal.")
+    if dist < 30: st.error(f"⚠️ Proximity Alert: {dist}cm is too near.")
+    else: st.success("✅ Distance healthy.")
+    if outdoor < 2: st.warning("⚠️ Light Alert: Need 2+ hrs sun.")
+    else: st.success("✅ Sunlight optimal.")
 
-# --- 6. CITATION ---
+# --- 6. CITATION & LICENSE ---
 st.divider()
-st.markdown("**Academic Citation**")
-st.code(f"""@software{{krishna_myopia_2026,
+col_left, col_right = st.columns(2)
+with col_left:
+    st.markdown("**Academic Citation**")
+    st.code(f"""@software{{krishna_myopia_2026,
   author = {{Krishna, Hitha}},
   title = {{Myopia Insight AI}},
   year = {{2026}},
   url = {{https://github.com/Meerarkrish/Myopia-Insight}}
 }}""", language="latex")
 
-# CSV Export
-meta = {"gender": [gender_choice], "final_rx": [final_rx], "treatment": [treatment_on]}
-st.download_button("Export Research CSV", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_data.csv")
+with col_right:
+    st.markdown("**MIT License**")
+    st.markdown('<div class="license-text">Copyright (c) 2026 Hitha Krishna. Provided "as is" without warranty.</div>', unsafe_allow_html=True)
+    meta = {"gender": [gender_choice], "final_rx": [final_rx], "treatment": [treatment_on]}
+    st.download_button("Export Research CSV", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_data.csv")
