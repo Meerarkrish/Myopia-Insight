@@ -8,48 +8,54 @@ from datetime import datetime
 # --- 1. UI CONFIGURATION ---
 st.set_page_config(page_title="Myopia Insight | Hitha Krishna", layout="wide")
 
+# This CSS uses universal selectors to FORCE the colors
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Lexend:wght@700&display=swap');
     
     .stApp { background-color: #F8FAFC; }
     
-    /* 1. HEADING: Fluorescent Purple */
-    .main-title { 
-        font-family: 'Lexend', sans-serif; 
-        font-size: 42px; 
+    /* 1. HEADING: Forced Fluorescent Purple */
+    /* Target all headers to ensure the main one turns purple */
+    h1 { 
+        font-family: 'Lexend', sans-serif !important; 
         color: #A855F7 !important; 
-        font-weight: 700;
-        margin-bottom: 20px;
+        font-size: 42px !important;
+        text-shadow: 0 0 10px rgba(168, 85, 247, 0.2);
     }
 
-    /* 2. SLIDERS: Fluorescent Green Track & Cursor */
-    div[data-baseweb="slider"] > div > div {
+    /* 2. SLIDERS: Fluorescent Green */
+    /* The track behind the cursor */
+    div[data-baseweb="slider"] > div > div:nth-child(2) {
         background: #39FF14 !important;
     }
+    /* The cursor itself */
     div[data-baseweb="slider"] [role="slider"] {
         background-color: #39FF14 !important;
         border: 2px solid #FFFFFF !important;
         box-shadow: 0 0 15px #39FF14 !important;
     }
 
-    /* 3. TOGGLE & RADIOS: Neon Blue */
-    /* Target the switch specifically */
-    div[data-testid="stWidgetLabel"] + div [role="switch"][aria-checked="true"] > div {
+    /* 3. TOGGLES & RADIOS: Neon Blue */
+    /* Toggle switch background when ON */
+    div[data-testid="stWidgetLabel"] + div [role="switch"][aria-checked="true"] {
         background-color: #00FFFF !important;
     }
+    div[data-testid="stWidgetLabel"] + div [role="switch"][aria-checked="true"] > div {
+        background-color: #FFFFFF !important; /* Knob color */
+    }
     
-    /* Radio Circles */
+    /* Radio button selection */
     div[role="radiogroup"] div[data-checked="true"] > div {
         background-color: #00FFFF !important;
         border-color: #00FFFF !important;
         box-shadow: 0 0 10px #00FFFF !important;
     }
-    
+
+    /* Professional Sidebar & Metrics */
+    [data-testid="stSidebar"] { background-color: #FFFFFF; }
     .stMetric { background: white; padding: 15px; border-radius: 10px; border: 1px solid #E2E8F0; }
-    
-    /* License Styling */
-    .license-text { font-size: 10px; color: #94A3B8; font-family: monospace; }
+    .license-text { font-size: 11px; color: #94A3B8; font-family: monospace; line-height: 1.5; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -77,13 +83,16 @@ def train_clinical_model():
 model = train_clinical_model()
 
 # --- 3. MAIN HEADING ---
-st.markdown('<div class="main-title">Myopia Insight AI</div>', unsafe_allow_html=True)
+st.title("Myopia Insight AI")
 
 # --- 4. SIDEBAR ---
 with st.sidebar:
-    st.title("Patient Inputs")
+    st.header("Patient Profile")
     age_now = st.slider("Current Age", 2, 23, 10)
+    
+    # GENDER (Neon Blue)
     gender_choice = st.radio("Biological Gender", ["Male", "Female", "Other"], horizontal=True)
+    
     country = st.selectbox("Region", ["India", "Singapore", "China", "USA", "UK", "Australia", "Other"])
     heritage = st.toggle("East/South Asian Heritage")
     
@@ -95,22 +104,24 @@ with st.sidebar:
     os_cyl = st.number_input("OS Cylinder", -8.0, 0.0, -0.50, step=0.25)
     
     st.divider()
-    st.subheader("Medical History")
+    st.subheader("Clinical History")
     parents = st.radio("Myopic Parents", [0, 1, 2], horizontal=True)
     onset = st.number_input("Onset Age", 2, age_now, 7)
     preterm = st.toggle("Preterm Birth")
     gd = st.toggle("Maternal GD")
 
 # --- 5. MAIN DASHBOARD ---
-st.markdown("### Clinical Simulation & Lifestyle")
+st.markdown("### Simulation & Lifestyle Controls")
 
-treatment_on = st.toggle("Activate Treatment Simulation")
+# TREATMENT TOGGLE (Neon Blue)
+treatment_on = st.toggle("Enable Clinical Treatment Simulation")
 
 c1, c2, c3 = st.columns(3)
-with c1: outdoor = st.slider("Outdoor Sunlight (Hrs)", 0.0, 6.0, 1.0)
-with c2: screen = st.slider("Near-Work Hours", 0.0, 16.0, 6.0)
-with c3: dist = st.slider("Distance (cm)", 10, 60, 35)
+with c1: outdoor = st.slider("Outdoor sunlight (Hrs)", 0.0, 6.0, 1.0)
+with c2: screen = st.slider("Near-work Hours", 0.0, 16.0, 6.0)
+with c3: dist = st.slider("Eye-to-Task Distance (cm)", 10, 60, 35)
 
+# Logic
 years = np.arange(age_now, 25)
 def get_path(sph, treat):
     path, curr = [], sph
@@ -125,29 +136,36 @@ def get_path(sph, treat):
 path_baseline = get_path(od_sph, False)
 path_treated = get_path(od_sph, True)
 
+# Visuals
 chart_col, stat_col = st.columns([2, 1])
 
 with chart_col:
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=years, y=path_baseline, name='Baseline', line=dict(color='#CBD5E1', width=2, dash='dot')))
+    # Baseline: Muted Gray
+    fig.add_trace(go.Scatter(x=years, y=path_baseline, name='Natural History', line=dict(color='#CBD5E1', width=2, dash='dot')))
+    
     if treatment_on:
-        fig.add_trace(go.Scatter(x=years, y=path_treated, name='Clinical Path', line=dict(color='#A855F7', width=6)))
+        # TREATMENT LINE: Fluorescent Purple
+        fig.add_trace(go.Scatter(x=years, y=path_treated, name='Treated Path', line=dict(color='#A855F7', width=6)))
+    
     fig.update_layout(template="simple_white", height=450, yaxis_title="Sphere (D)")
     st.plotly_chart(fig, use_container_width=True)
 
 with stat_col:
-    st.subheader("Analysis")
+    st.subheader("Clinical Metrics")
     final_rx = path_treated[-1] if treatment_on else path_baseline[-1]
-    st.metric("Forecasted Rx (Age 24)", f"{final_rx:.2f} D")
-    if dist < 30: st.error(f"⚠️ Proximity Alert: {dist}cm is too near.")
-    else: st.success("✅ Distance healthy.")
-    if outdoor < 2: st.warning("⚠️ Light Alert: Need 2+ hrs sun.")
-    else: st.success("✅ Sunlight optimal.")
+    st.metric("Predicted Rx @ 24", f"{final_rx:.2f} D")
+    
+    if dist < 30: st.error(f"Distance too short ({dist}cm)")
+    else: st.success("Distance optimal")
+    if outdoor < 2: st.warning("Increase Sun Exposure")
+    else: st.success("Sunlight levels good")
 
-# --- 6. CITATION & LICENSE ---
+# --- 6. FOOTER (Citation & License) ---
 st.divider()
-col_left, col_right = st.columns(2)
-with col_left:
+col_doc, col_cite = st.columns(2)
+
+with col_doc:
     st.markdown("**Academic Citation**")
     st.code(f"""@software{{krishna_myopia_2026,
   author = {{Krishna, Hitha}},
@@ -156,8 +174,8 @@ with col_left:
   url = {{https://github.com/Meerarkrish/Myopia-Insight}}
 }}""", language="latex")
 
-with col_right:
+with col_cite:
     st.markdown("**MIT License**")
-    st.markdown('<div class="license-text">Copyright (c) 2026 Hitha Krishna. Provided "as is" without warranty.</div>', unsafe_allow_html=True)
-    meta = {"gender": [gender_choice], "final_rx": [final_rx], "treatment": [treatment_on]}
-    st.download_button("Export Research CSV", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_data.csv")
+    st.markdown(f'<div class="license-text">Copyright (c) {datetime.now().year} Hitha Krishna. <br>Permission is hereby granted to use this software for research purposes...</div>', unsafe_allow_html=True)
+    meta = {"gender": [gender_choice], "final_rx": [final_rx]}
+    st.download_button("Export Data CSV", pd.DataFrame(meta).to_csv(index=False).encode('utf-8'), "myopia_research.csv")
